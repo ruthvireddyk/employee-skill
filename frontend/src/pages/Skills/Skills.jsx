@@ -221,19 +221,22 @@
 
 // export default Skills;
 
+
 import { useEffect, useState } from "react";
 import API from "../../services/api";
 import "./Skills.css";
 
 function Skills() {
-  const [skills, setSkills] = useState([]);
-  const [formData, setFormData] = useState({
+  const initialForm = {
     skillName: "",
     category: "",
     proficiencyLevel: "beginner",
     yearsOfExperience: "",
     source: "",
-  });
+  };
+
+  const [skills, setSkills] = useState([]);
+  const [formData, setFormData] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -250,22 +253,23 @@ function Skills() {
     }
   };
 
- const handleChange = (e) => {
-  const value =
-    e.target.type === "number"
-      ? e.target.value === ""
-        ? ""
-        : parseFloat(e.target.value)
-      : e.target.value;
+  const handleChange = (e) => {
+    const { name, value, type } = e.target;
 
-  setFormData((prev) => ({
-    ...prev,
-    [e.target.name]: value,
-  }));
-};
+    setFormData((prev) => ({
+      ...prev,
+      [name]:
+        type === "number"
+          ? value === ""
+            ? ""
+            : Number(value)
+          : value,
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setLoading(true);
 
     try {
@@ -277,17 +281,11 @@ function Skills() {
         alert("✅ Skill Added Successfully!");
       }
 
-      setFormData({
-        skillName: "",
-        category: "",
-        proficiencyLevel: "beginner",
-        yearsOfExperience: "",
-        source: "",
-        // endorsementCount: 0,
-      });
+      setFormData(initialForm);
       setEditingId(null);
       fetchSkills();
     } catch (err) {
+      console.error(err);
       alert(err.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
@@ -296,18 +294,21 @@ function Skills() {
 
   const editSkill = (skill) => {
     setEditingId(skill._id);
+
     setFormData({
-      skillName: skill.skillName,
-      category: skill.category || "",
+      skillName: skill.skillName || "",
+      category:
+        skill.category === "techical"
+          ? "technical"
+          : skill.category || "",
       proficiencyLevel: skill.proficiencyLevel || "beginner",
-      yearsOfExperience: skill.yearsOfExperience || "",
+      yearsOfExperience: skill.yearsOfExperience ?? "",
       source: skill.source || "",
-      // endorsementCount: skill.endorsementCount || 0,
     });
   };
 
   const deleteSkill = async (id) => {
-    if (!window.confirm("🗑️ Delete this skill?")) return;
+    if (!window.confirm("Delete this skill?")) return;
 
     try {
       await API.delete(`/skills/${id}`);
@@ -320,14 +321,7 @@ function Skills() {
 
   const cancelEdit = () => {
     setEditingId(null);
-    setFormData({
-      skillName: "",
-      category: "",
-      proficiencyLevel: "beginner",
-      yearsOfExperience: "",
-      source: "",
-      // endorsementCount: 0,
-    });
+    setFormData(initialForm);
   };
 
   return (
@@ -339,63 +333,75 @@ function Skills() {
         <input
           type="text"
           name="skillName"
-          placeholder="Skill Name *"
+          placeholder="Skill Name"
           value={formData.skillName}
           onChange={handleChange}
           required
         />
-        {/* <input
-          type="text"
+
+        <select
           name="category"
-          placeholder="Category"
           value={formData.category}
           onChange={handleChange}
-        /> */}
-         <select name="category" value={formData.category} onChange={handleChange}>
-          <option value="techical">Technical Skill</option>
-          <option value="soft"> SoftSkill</option>
-          
+          required
+        >
+          <option value="">Select Category</option>
+          <option value="technical">Technical Skill</option>
+          <option value="soft">Soft Skill</option>
         </select>
 
-        <select name="proficiencyLevel" value={formData.proficiencyLevel} onChange={handleChange}>
+        <select
+          name="proficiencyLevel"
+          value={formData.proficiencyLevel}
+          onChange={handleChange}
+        >
           <option value="beginner">Beginner</option>
-          <option value="intermediate"> Intermediate</option>
-          <option value="advanced"> Advanced</option>
+          <option value="intermediate">Intermediate</option>
+          <option value="advanced">Advanced</option>
           <option value="expert">Expert</option>
         </select>
+
         <input
           type="number"
           name="yearsOfExperience"
-          placeholder="Years"
+          placeholder="Years of Experience"
           value={formData.yearsOfExperience}
           onChange={handleChange}
           min="0"
           step="0.5"
         />
+
         <select
-  name="source"
-  value={formData.source}
-  onChange={handleChange}
->
-  <option value="">Select Source</option>
-  <option value="self">Self</option>
-  <option value="resume">Resume</option>
-  <option value="endorsed">Endorsed</option>
-</select>
-        {/* <input
-          type="number"
-          name="endorsementCount"
-          placeholder="Endorsements"
-          value={formData.endorsementCount}
+          name="source"
+          value={formData.source}
           onChange={handleChange}
-          min="0"
-        /> */}
-        <button type="submit" className="btn-submit" disabled={loading}>
-          {loading ? "Saving..." : editingId ? "✏️ Update" : "➕ Add"}
+          required
+        >
+          <option value="">Select Source</option>
+          <option value="self">Self</option>
+          <option value="resume">Resume</option>
+          <option value="endorsed">Endorsed</option>
+        </select>
+
+        <button
+          type="submit"
+          className="btn-submit"
+          disabled={loading}
+        >
+          {loading
+            ? "Saving..."
+            : editingId
+            ? "Update Skill"
+            : "Add Skill"}
         </button>
+
         {editingId && (
-          <button type="button" className="btn-cancel" onClick={cancelEdit}>
-            ❌ Cancel
+          <button
+            type="button"
+            className="btn-cancel"
+            onClick={cancelEdit}
+          >
+            Cancel
           </button>
         )}
       </form>
@@ -413,32 +419,52 @@ function Skills() {
               <th>Actions</th>
             </tr>
           </thead>
+
           <tbody>
             {skills.length === 0 ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: "center", padding: "40px", color: "var(--text)" }}>
-                  No skills added yet. Start by adding one above! 🚀
+                <td colSpan="7" style={{ textAlign: "center", padding: 40 }}>
+                  No skills added yet.
                 </td>
               </tr>
             ) : (
               skills.map((skill) => (
                 <tr key={skill._id}>
-                  <td><strong>{skill.skillName}</strong></td>
-                  <td>{skill.category || "-"}</td>
                   <td>
-                    <span className={`proficiency-badge ${skill.proficiencyLevel}`}>
+                    <strong>{skill.skillName}</strong>
+                  </td>
+
+                  <td>{skill.category || "-"}</td>
+
+                  <td>
+                    <span
+                      className={`proficiency-badge ${skill.proficiencyLevel}`}
+                    >
                       {skill.proficiencyLevel}
                     </span>
                   </td>
-                  <td>{skill.yearsOfExperience || 0}</td>
+
+                  <td>{skill.yearsOfExperience ?? 0}</td>
+
                   <td>{skill.source || "-"}</td>
-                  <td>{skill.endorsementCount || 0}</td>
+
+                  <td>{skill.endorsementCount ?? 0}</td>
+
                   <td>
-                    <button className="btn-edit" onClick={() => editSkill(skill)}>
-                       Edit
+                    <button
+                      type="button"
+                      className="btn-edit"
+                      onClick={() => editSkill(skill)}
+                    >
+                      Edit
                     </button>
-                    <button className="btn-delete" onClick={() => deleteSkill(skill._id)}>
-                       Delete
+
+                    <button
+                      type="button"
+                      className="btn-delete"
+                      onClick={() => deleteSkill(skill._id)}
+                    >
+                      Delete
                     </button>
                   </td>
                 </tr>
@@ -452,3 +478,4 @@ function Skills() {
 }
 
 export default Skills;
+
